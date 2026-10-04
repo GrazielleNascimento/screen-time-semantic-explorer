@@ -45,16 +45,26 @@ def search(question, n_results=N_RESULTS):
 
 def print_results(question, results):
     """Imprime, para uma pergunta, os chunks retornados com PDF de origem e distância."""
-    # Os resultados vêm como listas de listas (uma lista por pergunta);
-    # como fizemos só 1 pergunta, pegamos o índice [0]
     documents = results["documents"][0]
     metadatas = results["metadatas"][0]
     distances = results["distances"][0]
 
-    print(f'Pergunta: "{question}"\n')
+    print("\n" + "=" * 100)
+    print(f'❓ PERGUNTA: "{question}"')
+    print("=" * 100 + "\n")
+
     for rank, (text, meta, dist) in enumerate(zip(documents, metadatas, distances), start=1):
-        print(f"#{rank}  distância: {dist:.4f}  |  PDF: {meta['source_file']}  |  chunk_idx: {meta['chunk_idx']}")
-        print(f"    {text}\n")
+        relevance = "🟢 Alta" if dist < 0.2 else "🟡 Média" if dist < 0.35 else "🔴 Baixa"
+        print(f"📄 Resultado #{rank} | Relevância: {relevance} | Distância: {dist:.4f}")
+        print(f"   Arquivo: {meta['source_file']} | Chunk: {meta['chunk_idx']}")
+        print(f"   ─" * 50)
+
+        # Trunca e formata o texto para melhor legibilidade
+        truncated_text = text[:250] + "..." if len(text) > 250 else text
+        print(f"   {truncated_text}")
+        print()
+
+    print("─" * 100 + "\n")
 
 
 def main():

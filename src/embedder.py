@@ -18,9 +18,6 @@ import logging
 import os
 from pathlib import Path
 
-# Desabilita telemetria do ChromaDB (evita problemas com DLL no Windows)
-os.environ["OTEL_SDK_DISABLED"] = "true"
-
 import chromadb
 from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
 
@@ -32,12 +29,9 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 CHUNKS_FILE = ROOT_DIR / "data" / "processed" / "chunks.jsonl"
 CHROMA_DIR = ROOT_DIR / "data" / "chroma"
 
-# Configurações compartilhadas com search.py (ele importa daqui,
-# garantindo que a busca use exatamente o MESMO modelo da indexação)
 COLLECTION_NAME = "screen_time_children"
-# all-MiniLM-L6-v2 via ONNX Runtime (embutido no próprio ChromaDB).
-# Mesmo modelo que SentenceTransformerEmbeddingFunction usaria, mas sem
-# depender do PyTorch (contorna bloqueio de política de app no Windows).
+
+
 BATCH_SIZE = 500  # quantos chunks inserir por vez no ChromaDB
 
 
@@ -65,8 +59,7 @@ def main():
         logger.warning("Collection '%s' já existe, apagando para recriar do zero", COLLECTION_NAME)
         client.delete_collection(COLLECTION_NAME)
 
-    # "hnsw:space": "cosine" faz collection.query() retornar distância de
-    # cosseno (0 = idêntico, quanto maior, menos parecido)
+
     collection = client.create_collection(
         name=COLLECTION_NAME,
         embedding_function=get_embedding_function(),
