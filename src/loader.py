@@ -2,8 +2,8 @@
 loader.py - Etapa 1 do pipeline: extração de texto e divisão em chunks.
 
 Passos:
-    1. Lê todos os PDFs de data/raw/.
-    2. Extrai e normaliza o texto de cada PDF.
+    1. Lê todos os PDFs e arquivos .txt de data/raw/.
+    2. Extrai e normaliza o texto de cada arquivo.
     3. Divide o texto em chunks de tamanho fixo, com sobreposição (overlap).
     4. Salva cada chunk como uma linha JSON em data/processed/chunks.jsonl.
 
@@ -43,6 +43,17 @@ def extract_text(pdf_path):
     return " ".join(full_text.split())
 
 
+def read_text(path):
+    """Lê o texto de um arquivo .pdf ou .txt (escolhido pelo sufixo); outro sufixo gera ValueError."""
+    suffix = Path(path).suffix.lower()
+    if suffix == ".pdf":
+        return extract_text(path)
+    if suffix == ".txt":
+        raw = Path(path).read_text(encoding="utf-8", errors="replace")
+        return " ".join(raw.split())
+    raise ValueError(f"Formato não suportado: {suffix}")
+
+
 def split_into_chunks(text, chunk_size=CHUNK_SIZE, overlap=OVERLAP):
     """
     Divide o texto em chunks de `chunk_size` caracteres.
@@ -65,8 +76,8 @@ def main():
     """Extrai o texto de cada PDF, gera os chunks e grava tudo em OUTPUT_FILE."""
     configure_logging()
 
-    pdf_files = sorted(RAW_DIR.glob("*.pdf"))
-    logger.info("Encontrados %d PDFs em %s", len(pdf_files), RAW_DIR)
+    pdf_files = sorted(RAW_DIR.glob("*.pdf")) + sorted(RAW_DIR.glob("*.txt"))
+    logger.info("Encontrados %d arquivos (.pdf/.txt) em %s", len(pdf_files), RAW_DIR)
 
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     total_chunks = 0
@@ -74,10 +85,10 @@ def main():
     with open(OUTPUT_FILE, "w", encoding="utf-8") as out:
         for pdf_path in pdf_files:
             try:
-                text = extract_text(pdf_path)
+                text = read_text(pdf_path)
             except Exception:
-                # Um PDF corrompido/ilegível não pode derrubar o lote inteiro
-                logger.error("Falha ao extrair texto de %s, pulando arquivo", pdf_path.name, exc_info=True)
+                # Um arquivo corrompido/ilegível não pode derrubar o lote inteiro
+                logger.error("Falha ao ler %s, pulando arquivo", pdf_path.name, exc_info=True)
                 continue
 
             chunks = split_into_chunks(text)
@@ -86,7 +97,7 @@ def main():
                 record = {
                     "id": f"{pdf_path.stem}_{idx}",  # id único: nome do arquivo + índice
                     "source_file": pdf_path.name,
-                    "file_type": "pdf",
+                    "file_type": pdf_path.suffix.lower().lstrip("."),  # "pdf" ou "txt"
                     "chunk_idx": idx,
                     "char_count": len(chunk_text),
                     "text": chunk_text,
