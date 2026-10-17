@@ -74,7 +74,7 @@ def print_results(question, results):
     for rank, (text, meta, dist) in enumerate(zip(documents, metadatas, distances), start=1):
         print(f"📄 Resultado #{rank} | Distância: {dist:.4f} | Similaridade: {max(0.0, 1 - dist):.0%}")
         print(f"   Arquivo: {meta['source_file']} | Chunk: {meta['chunk_idx']}")
-        print(f"   ─" * 50)
+        print("   ─" * 50)
 
         # Trunca e formata o texto para melhor legibilidade
         truncated_text = text[:250] + "..." if len(text) > 250 else text

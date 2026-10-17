@@ -1,0 +1,9 @@
+line-length = 120
+extend-exclude = ["venv", "reports_backup"]
+
+[lint]
+select = ["E", "F"]
+ignore = ["E501", "E731"]
+
+[lint.per-file-ignores]
+"app.py" = ["E402"]
