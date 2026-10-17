@@ -187,4 +187,4 @@ python -m unittest discover -s tests -t . -v
 docker compose up --build               # alternative: run the interface in Docker
 ```
 
-`run_quality.py` modifies the database; run it once per index (rebuild with `embedder.py` to start over). More details are in the [README](../README.md).
+`run_quality.py` modifies the database; run it once per index (rebuild with `embedder.py` to start over). More details are in the [README](../README-EN.md).

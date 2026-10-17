@@ -1,412 +1,414 @@
 # Capstone Data Science
 
-## Semantic Search, Quality Control and Cluster Exploration over Scientific Articles
+🇧🇷 Português · [🇺🇸 English](README-EN.md)
 
-## What is this project?
+## Busca Semântica, Controle de Qualidade e Exploração de Clusters em Artigos Científicos
 
-An end-to-end system that turns scientific articles (PDF) into an **interactive application** to explore a document corpus using embeddings and clustering.
+## O que é este projeto?
 
-1. Documents are loaded and split into chunks.
-2. Each chunk becomes an **embedding** (a numeric representation of its meaning) stored in a vector database.
-3. You can **search by meaning**, not by exact keywords.
-4. An **Isolation Forest** flags anomalous chunks; the system writes a **quality report** (before and after cleaning) and removes them from the database.
-5. A **web interface** (Streamlit) offers search, an interactive **K-Means / t-SNE cluster map** and the quality report.
+Um sistema completo que transforma artigos científicos em PDF em uma **aplicação interativa** para explorar um corpus de documentos usando embeddings e clusterização.
 
-**Example:** searching for "effects of screen time on children" also finds passages about "impact of digital media on minors", even when they do not share the same words.
+1. Os documentos são carregados e divididos em trechos (chunks).
+2. Cada trecho vira um **embedding** (representação numérica do significado) guardado em um banco vetorial.
+3. Você pode **buscar por sentido**, não por palavra exata.
+4. Um **Isolation Forest** marca os trechos anômalos; o sistema gera um **relatório de qualidade** (antes e depois da limpeza) e remove esses trechos do banco.
+5. Uma **interface web** (Streamlit) oferece busca, um **mapa interativo de clusters (K-Means / t-SNE)** e o relatório de qualidade.
 
-Technical reports (architecture diagrams, decisions, results and future work) are available in [Portuguese](docs/relatorio_projeto.md) and [English](docs/project_report.md).
+**Exemplo:** se você buscar "efeitos do tempo de tela em crianças", o sistema também encontra trechos sobre "impacto de mídias digitais em menores de idade", mesmo que não usem as mesmas palavras.
 
-## Chosen domain
+Os relatórios técnicos (diagramas de arquitetura, decisões, resultados e trabalhos futuros) estão disponíveis em [português](docs/relatorio_projeto.md) e [inglês](docs/project_report.md).
 
-**Effects of screen use on children and adolescents**
+## Domínio escolhido
 
-Topics covered by the articles:
+**Efeitos do uso de telas em crianças e adolescentes**
 
-- Screen time and mental health
-- Digital media and childhood obesity
-- Impact on sleep and sleep quality
-- Cognitive development and learning
-- Behavior and socialization
-- Interventions and clinical recommendations
+Temas cobertos nos artigos:
 
-**Data source:** 30 open-access scientific articles from **PubMed Central (PMC)**, collected in 2026. PDF file names are their PMC identifiers (e.g. `PMC13589963.pdf`).
+- Tempo de tela (screen time) e saúde mental
+- Mídia digital e obesidade infantil
+- Impacto no sono e na qualidade do sono
+- Desenvolvimento cognitivo e aprendizagem
+- Comportamento e socialização
+- Intervenções e recomendações clínicas
 
-## Pipeline (data flow)
+**Fonte dos dados:** 30 artigos científicos de acesso aberto do **PubMed Central (PMC)**, coletados em 2026. Os nomes dos PDFs são seus identificadores PMC (ex.: `PMC13589963.pdf`).
+
+## Pipeline (fluxo dos dados)
 
 ```
 PDFs / .txt (data/raw/)
     |
     v
-[loader.py]   Text extraction + chunking (250 characters, 50 overlap)
+[loader.py]   Extração de texto + chunking (250 caracteres, 50 de sobreposição)
     |
     v
-chunks.jsonl (data/processed/)   6,165 chunks
+chunks.jsonl (data/processed/)   6.165 trechos
     |
     v
-[clean.py]    Removes empty, too-short, mostly-numeric or garbled chunks (rules, no ML)
+[clean.py]    Remove trechos vazios, curtos, quase só números ou com muito lixo (regras, sem ML)
     |
     v
-chunks.jsonl (cleaned)           6,069 chunks
+chunks.jsonl (filtrado)          6.069 trechos
     |
     v
-[embedder.py] Embeddings (all-MiniLM-L6-v2, ONNX) + ChromaDB indexing
+[embedder.py] Embeddings (all-MiniLM-L6-v2, ONNX) + indexação no ChromaDB
     |
     v
-ChromaDB (data/chroma/)          Persistent vector database, 6,069 chunks
+ChromaDB (data/chroma/)          Banco vetorial persistido, 6.069 trechos
     |
-    +--> [search.py]       Semantic search (terminal and interface)
+    +--> [search.py]       Busca semântica (terminal e interface)
     |
     +--> [run_quality.py]  Isolation Forest -> reports/quality_report.md
-    |                      removes 183 anomalous chunks -> 5,886 chunks
+    |                      remove 183 trechos anômalos -> 5.886 trechos
     |
-    +--> [clustering.py]   K-Means (N chosen by the user) + t-SNE map
+    +--> [clustering.py]   K-Means (N escolhido pelo usuário) + mapa t-SNE
     |
     v
-[app.py]  Streamlit interface: Home | Search | Clusters | Quality report
+[app.py]  Interface Streamlit: Home | Search | Clusters | Quality report
 ```
 
-Each step reads the output of the previous one, so every script can be re-run independently.
+Cada etapa lê a saída da anterior, então cada script pode ser rodado de forma independente.
 
-## Web interface
+## Interface web
 
-Run `streamlit run app.py` and open http://localhost:8501. The sidebar switches between four pages:
+Rode `streamlit run app.py` e abra http://localhost:8501. O menu lateral alterna entre quatro páginas:
 
-| Page | What it does |
+| Página | O que faz |
 |---|---|
-| **Home** | Landing page: number of indexed chunks, source documents and chunks removed by the quality check; shortcuts to the other pages; six research topics that open the search with a ready question. |
-| **Search** | Type a question and get the 5 most similar chunks (1 to 10 with the slider). Each result shows the source PDF, chunk number, cosine **distance**, **similarity** (1 − distance) and the text. |
-| **Clusters** | Choose the number of clusters N (2 to 10). The chunks are regrouped with **K-Means** and drawn on an interactive **t-SNE** map. Hovering a point shows PDF, chunk number and a text snippet. Below the map, each cluster shows its size, characteristic terms (TF-IDF) and main PDFs. A button exports the current chart as HTML to `reports/figures/`. |
-| **Quality report** | Shows `reports/quality_report.md`: what the Isolation Forest found and how the database looks before and after cleaning. |
+| **Home** | Tela de abertura: número de trechos indexados, de documentos de origem e de trechos removidos pelo controle de qualidade; atalhos para as outras páginas; seis temas de pesquisa que abrem a busca com uma pergunta pronta. |
+| **Search** | Digite uma pergunta e veja os 5 trechos mais parecidos (de 1 a 10 no controle deslizante). Cada resultado mostra o PDF de origem, o número do chunk, a **distância** de cosseno, a **similaridade** (1 − distância) e o texto. |
+| **Clusters** | Escolha o número de clusters N (2 a 10). Os trechos são reagrupados com **K-Means** e desenhados em um mapa **t-SNE** interativo. Ao passar o mouse em um ponto aparecem PDF, número do chunk e um trecho do texto. Abaixo do mapa, cada cluster mostra tamanho, termos característicos (TF-IDF) e PDFs principais. Um botão exporta o gráfico atual em HTML para `reports/figures/`. |
+| **Quality report** | Mostra `reports/quality_report.md`: o que o Isolation Forest encontrou e como o banco ficou antes e depois da limpeza. |
 
-If the index does not exist, every page shows **"Index not found. Run the pipeline first"** instead of failing.
+Se o índice não existir, todas as páginas mostram **"Index not found. Run the pipeline first"** em vez de quebrar.
 
-### Screenshots
+### Capturas de tela
 
-**Home page:**
+**Página inicial:**
 
 ![Home](docs/screenshots/home.png)
 
-**Search results:**
+**Busca com resultados:**
 
-![Search page with results](docs/screenshots/search.png)
+![Página de busca com resultados](docs/screenshots/search.png)
 
-**Search with no results:**
+**Busca sem resultados:**
 
-![Search page with no results](docs/screenshots/search_empty.png)
+![Página de busca sem resultados](docs/screenshots/search_empty.png)
 
-**Clusters and quality report:**
+**Clusters e relatório de qualidade:**
 
 ![Clusters](docs/screenshots/clusters.png)
-![Quality report](docs/screenshots/quality.png)
+![Relatório de qualidade](docs/screenshots/quality.png)
 
-Interactive cluster charts are also available to open in a browser:
+Os gráficos interativos de clusters também podem ser abertos diretamente no navegador:
 
-- [View clusters with K=3](reports/figures/clusters_k3.html)
-- [View clusters with K=5](reports/figures/clusters_k5.html)
-- [View clusters with K=10](reports/figures/clusters_k10.html)
+- [Visualizar clusters com K=3](reports/figures/clusters_k3.html)
+- [Visualizar clusters com K=5](reports/figures/clusters_k5.html)
+- [Visualizar clusters com K=10](reports/figures/clusters_k10.html)
 
-## Project structure
+## Estrutura do projeto
 
 ```
 CAPSTONE/
-├── app.py                   # Streamlit interface (entry point)
+├── app.py                   # Interface Streamlit (ponto de entrada)
 ├── data/
-│   ├── raw/                 # Original PDFs (30 articles)
+│   ├── raw/                 # PDFs originais (30 artigos)
 │   ├── processed/
-│   │   ├── chunks.jsonl     # Extracted and cleaned text chunks
-│   │   └── tsne_coords.npy  # t-SNE cache (generated, not versioned)
-│   └── chroma/              # ChromaDB vector database (generated, not versioned)
+│   │   ├── chunks.jsonl     # Trechos de texto extraídos e limpos
+│   │   └── tsne_coords.npy  # Cache do t-SNE (gerado, não versionado)
+│   └── chroma/              # Banco vetorial ChromaDB (gerado, não versionado)
 ├── src/
-│   ├── loader.py            # Reads PDF / .txt -> chunks.jsonl
-│   ├── clean.py             # Filters chunks.jsonl (removes noise)
-│   ├── embedder.py          # Generates embeddings -> ChromaDB
-│   ├── search.py            # Semantic search (command line and interface)
-│   ├── store.py             # Reads the corpus from / deletes ids in ChromaDB
+│   ├── loader.py            # Lê PDF / .txt -> chunks.jsonl
+│   ├── clean.py             # Filtra chunks.jsonl (remove ruído)
+│   ├── embedder.py          # Gera embeddings -> ChromaDB
+│   ├── search.py            # Busca semântica (terminal e interface)
+│   ├── store.py             # Lê o corpus / apaga ids no ChromaDB
 │   ├── anomaly.py           # Isolation Forest
-│   ├── quality_report.py    # Writes reports/quality_report.md
-│   ├── run_quality.py       # Runs the quality check (--dry-run available)
-│   ├── clustering.py        # K-Means, t-SNE and TF-IDF cluster summaries
-│   ├── test_search.py       # Validates the search (in-domain vs off-domain, uses the real database)
-│   ├── demo.py              # Demo with fixed domain questions
-│   └── logging_config.py    # Logging configuration
-├── ui/                      # Interface code (one file per page + theme and components)
-├── tests/                   # Automated tests (32, no network, no real database)
+│   ├── quality_report.py    # Escreve reports/quality_report.md
+│   ├── run_quality.py       # Roda o controle de qualidade (aceita --dry-run)
+│   ├── clustering.py        # K-Means, t-SNE e resumos de cluster com TF-IDF
+│   ├── test_search.py       # Valida a busca (domínio vs fora do domínio, usa o banco real)
+│   ├── demo.py              # Demonstração com perguntas fixas
+│   └── logging_config.py    # Configuração de logs
+├── ui/                      # Código da interface (um arquivo por página + tema e componentes)
+├── tests/                   # Testes automáticos (32, sem rede e sem o banco real)
 ├── reports/
-│   ├── quality_report.md    # Generated by run_quality.py
-│   ├── removed_ids.json     # Ids removed from the database (audit)
-│   └── figures/             # Exported cluster charts (backup for presentations)
-├── assets/topics/           # SVG illustrations of the research topics
+│   ├── quality_report.md    # Gerado por run_quality.py
+│   ├── removed_ids.json     # Ids removidos do banco (auditoria)
+│   └── figures/             # Gráficos de clusters exportados (plano B para apresentações)
+├── assets/topics/           # Ilustrações SVG dos temas de pesquisa
 ├── docs/
-│   ├── relatorio_projeto.md # Technical report (Portuguese)
-│   ├── project_report.md    # Technical report (English)
-│   └── screenshots/         # Interface screenshots
-├── .streamlit/config.toml   # Interface theme
+│   ├── relatorio_projeto.md # Relatório técnico (português)
+│   ├── project_report.md    # Relatório técnico (inglês)
+│   └── screenshots/         # Prints da interface
+├── .streamlit/config.toml   # Tema da interface
 ├── Dockerfile, docker-compose.yml, .dockerignore
-├── .gitlab-ci.yml           # CI: runs the tests
-├── requirements.txt         # Python dependencies
-└── README.md                # This file
+├── .gitlab-ci.yml           # CI: roda os testes
+├── requirements.txt         # Dependências Python
+└── README.md / README-EN.md # Documentação (português / inglês)
 ```
 
-## Installation
+## Instalação
 
-### Prerequisites
+### Pré-requisitos
 
 - Python 3.10+
-- Windows, macOS or Linux
-- Git (optional)
-- Docker (optional, to run the interface in a container)
+- Windows, macOS ou Linux
+- Git (opcional)
+- Docker (opcional, para rodar a interface em contêiner)
 
-### Step 1: Get the project
+### Passo 1: Obter o projeto
 
 ```bash
-git clone <your-repository-url>
+git clone <url-do-seu-repositorio>
 cd CAPSTONE
 ```
 
-### Step 2: Create a virtual environment
+### Passo 2: Criar um ambiente virtual
 
 ```bash
 python -m venv venv
 ```
 
-Activate it:
+Ativar:
 
 - **Windows (Git Bash):** `source venv/Scripts/activate`
 - **Windows (PowerShell):** `.\venv\Scripts\Activate.ps1`
 - **Windows (CMD):** `venv\Scripts\activate.bat`
 - **Linux / macOS:** `source venv/bin/activate`
 
-### Step 3: Install dependencies
+### Passo 3: Instalar as dependências
 
 ```bash
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Key libraries: `pypdf` (PDF reading), `chromadb` (vector database, also ships the embedding model), `scikit-learn` (Isolation Forest, K-Means, t-SNE, TF-IDF), `streamlit` and `plotly` (interface and interactive chart). There is no PyTorch: the embedding model runs on ONNX Runtime inside ChromaDB.
+Bibliotecas principais: `pypdf` (leitura de PDF), `chromadb` (banco vetorial, que também traz o modelo de embeddings), `scikit-learn` (Isolation Forest, K-Means, t-SNE, TF-IDF), `streamlit` e `plotly` (interface e gráfico interativo). **Não há PyTorch**: o modelo de embeddings roda no ONNX Runtime dentro do ChromaDB.
 
-## How to run
+## Como rodar
 
-### 1. Build the index (from scratch)
+### 1. Construir o índice (do zero)
 
-Run the steps **in this order**:
-
-```bash
-python src/loader.py      # Reads PDFs (and .txt files) and generates chunks
-python src/clean.py       # Removes invalid chunks
-python src/embedder.py    # Generates embeddings and loads ChromaDB (takes a few minutes)
-```
-
-`embedder.py` downloads the embedding model (~80 MB) on its first run and caches it for later runs. It deletes and recreates the collection, so it always starts from a clean index.
-
-### 2. Run the quality check
+Execute **nesta ordem**:
 
 ```bash
-python src/run_quality.py --dry-run   # only detects and writes the "before" section (nothing is removed)
-python src/run_quality.py             # detects, reports, removes the anomalies and writes the "after" section
+python src/loader.py      # Lê os PDFs (e arquivos .txt) e gera os chunks
+python src/clean.py       # Remove trechos inválidos
+python src/embedder.py    # Gera embeddings e carrega o ChromaDB (leva alguns minutos)
 ```
 
-The second command changes the database. **Run it once per index**: running it again analyses the already-cleaned database and removes another ~3%. To start over, run `python src/embedder.py` first.
+O `embedder.py` baixa o modelo de embeddings (~80 MB) na primeira execução e o guarda em cache. Ele apaga e recria a collection, então sempre começa de um índice limpo.
 
-### 3. Open the interface
+### 2. Rodar o controle de qualidade
+
+```bash
+python src/run_quality.py --dry-run   # só detecta e escreve a seção "antes" (nada é removido)
+python src/run_quality.py             # detecta, relata, remove as anomalias e escreve a seção "depois"
+```
+
+O segundo comando **altera o banco**. **Rode uma vez por índice**: rodar de novo analisa o banco já limpo e remove outros ~3%. Para recomeçar, rode `python src/embedder.py` antes.
+
+### 3. Abrir a interface
 
 ```bash
 streamlit run app.py
 ```
 
-Then open http://localhost:8501. For the Clusters page, the first run computes the t-SNE map (about a minute) and caches it in `data/processed/tsne_coords.npy`.
+Depois abra http://localhost:8501. Na página Clusters, a primeira execução calcula o mapa t-SNE (cerca de um minuto) e o guarda em `data/processed/tsne_coords.npy`.
 
-### 4. Search from the terminal
+### 4. Buscar pelo terminal
 
 ```bash
 python src/search.py "screen time and obesity in children"
 python src/search.py "does screen time affect sleep in children?"
 ```
 
-### 5. Run with Docker
+### 5. Rodar com Docker
 
 ```bash
 docker compose up --build
 ```
 
-The interface is served at http://localhost:8501. The folders `data/` and `reports/` are mounted as volumes, so **`data/chroma/` must already exist** (run the pipeline first); otherwise the page shows "Index not found". On the first search the container downloads the embedding model (~80 MB), so it needs internet access that time. Stop it with `docker compose down`.
+A interface fica em http://localhost:8501. As pastas `data/` e `reports/` são montadas como volumes, então **`data/chroma/` precisa já existir** (rode o pipeline antes); senão a página mostra "Index not found". Na primeira busca o contêiner baixa o modelo de embeddings (~80 MB), então precisa de internet nessa vez. Para parar: `docker compose down`.
 
-### 6. Run the tests
+### 6. Rodar os testes
 
 ```bash
 python -m unittest discover -s tests -t . -v
 ```
 
-32 tests, about 3 seconds. They use synthetic data and an in-memory ChromaDB: no network, no model download and no real database. The same command runs in the GitLab CI (`.gitlab-ci.yml`).
+32 testes, cerca de 3 segundos. Usam dados sintéticos e um ChromaDB em memória: sem rede, sem baixar modelo e sem o banco real. O mesmo comando roda no CI do GitLab (`.gitlab-ci.yml`).
 
-### Quick validation test of the search
+### Teste rápido de validação da busca
 
-Compares a search **inside the domain** against one **outside the domain** (uses the real database):
+Compara uma busca **dentro do domínio** com uma **fora do domínio** (usa o banco real):
 
 ```bash
 python src/test_search.py
 ```
 
-Result obtained on this project:
+Resultado obtido neste projeto:
 
 ```
-Query: "screen time and obesity"   -> average distance 0.17
-Query: "recipe for chocolate cake" -> average distance 0.78
-OK: the domain query returned smaller distances than the unrelated query.
+Query: "screen time and obesity"   -> distância média 0.17
+Query: "recipe for chocolate cake" -> distância média 0.78
+OK: a busca do domínio retornou distâncias menores que a busca sem relação.
 ```
 
-If the in-domain distances are clearly smaller, the index is working.
+Se as distâncias do domínio forem claramente menores, o índice está funcionando.
 
-### Demo (several domain questions)
+### Demonstração (várias perguntas)
 
 ```bash
 python src/demo.py
 ```
 
-Runs a fixed list of questions (two about the domain plus one off-topic control question) and prints, for each result: distance, similarity, source PDF and chunk number. Each result shows the cosine distance (lower = more relevant) and the similarity (1 − distance).
+Roda uma lista fixa de perguntas (duas do domínio mais uma de controle fora do tema) e imprime, para cada resultado: distância, similaridade, PDF de origem e número do chunk. Cada resultado mostra a distância de cosseno (quanto menor, mais relevante) e a similaridade (1 − distância).
 
-## Quality control with Isolation Forest
+## Controle de qualidade com Isolation Forest
 
-The quality check runs **after** the vector database is loaded, over **all embeddings at once**: a chunk is only anomalous *relative to the rest of the corpus*.
+O controle de qualidade roda **depois** que o banco vetorial está carregado, sobre **todos os embeddings de uma vez**: um trecho só é anômalo *em relação ao restante do corpus*.
 
-- **Isolation Forest** (`src/anomaly.py`): 200 random trees. A chunk that is isolated with few cuts gets a **low score**, meaning it is more anomalous. `contamination = 0.03` means the 3% lowest-scored chunks are flagged.
-- **Report** (`reports/quality_report.md`, generated by `src/run_quality.py`, never written by hand): parameters, totals and score statistics before cleaning, the 15 most anomalous chunks, anomalies per PDF, and the database after cleaning.
-- **Audit:** the removed ids are saved in `reports/removed_ids.json` before anything is deleted.
+- **Isolation Forest** (`src/anomaly.py`): 200 árvores aleatórias. Um trecho que é isolado com poucos cortes recebe **nota baixa**, ou seja, é mais anômalo. `contamination = 0.03` significa que os 3% de menor nota são marcados.
+- **Relatório** (`reports/quality_report.md`, gerado por `src/run_quality.py`, nunca escrito à mão): parâmetros, totais e estatísticas das notas antes da limpeza, os 15 trechos mais anômalos, anomalias por PDF e o banco depois da limpeza.
+- **Auditoria:** os ids removidos são salvos em `reports/removed_ids.json` antes de qualquer remoção.
 
-Result on this project:
+Resultado neste projeto:
 
-| | Chunks |
+| | Trechos |
 |---|---|
-| Before cleaning | 6,069 |
-| Flagged as anomalous (3.02%) | 183 |
-| After cleaning | 5,886 |
+| Antes da limpeza | 6.069 |
+| Marcados como anômalos (3,02%) | 183 |
+| Depois da limpeza | 5.886 |
 
-**Curation note:** not every flagged chunk is garbage. The most anomalous chunks include real noise (lists of countries, a LaTeX preamble, a list of TV characters) but also legitimate methods text. The report shows examples so the removal can be reviewed before trusting it.
+**Nota de curadoria:** nem todo trecho marcado é lixo. Entre os mais anômalos há ruído de verdade (listas de países, um preâmbulo de LaTeX, uma lista de personagens de TV), mas também texto legítimo de métodos. O relatório mostra exemplos para que a remoção possa ser revisada antes de confiar nela.
 
 ## Clusters (K-Means + t-SNE)
 
-- **K-Means** (`src/clustering.py`) groups the 384-dimensional embeddings into N groups; N is chosen in the interface (2 to 10). K-Means always returns N groups, even when the data has no natural groups, so clusters should be read as a guide.
-- **t-SNE** projects the embeddings to 2D (cosine metric) only to **draw** the map; the clusters are computed on the original embeddings. The projection is slow, so it is cached on disk and recomputed only if the number of chunks changes.
-- Each cluster is summarized with its **characteristic terms** (TF-IDF) and its **main PDFs**.
+- **K-Means** (`src/clustering.py`) agrupa os embeddings de 384 dimensões em N grupos; o N é escolhido na interface (2 a 10). O K-Means sempre devolve N grupos, mesmo quando os dados não têm grupos naturais, então os clusters devem ser lidos como uma referência.
+- **t-SNE** projeta os embeddings em 2D (métrica de cosseno) só para **desenhar** o mapa; os clusters são calculados nos embeddings originais. A projeção é lenta, então fica em cache no disco e só é recalculada se o número de trechos mudar.
+- Cada cluster é resumido com seus **termos característicos** (TF-IDF) e seus **PDFs principais**.
 
-Example with N = 3 (5,886 chunks):
+Exemplo com N = 3 (5.886 trechos):
 
-| Cluster | Chunks | Characteristic terms |
+| Cluster | Trechos | Termos característicos |
 |---|---|---|
-| 0 | 2,559 | study, children, data, intervention, health, family, school |
-| 1 | 1,822 | screen, use, time, content, exposure, digital, television |
-| 2 | 1,505 | sleep, obesity, time, activity, physical, screen, bmi |
+| 0 | 2.559 | study, children, data, intervention, health, family, school |
+| 1 | 1.822 | screen, use, time, content, exposure, digital, television |
+| 2 | 1.505 | sleep, obesity, time, activity, physical, screen, bmi |
 
-## Understanding semantic search
+## Entender a busca semântica
 
-### How does it work?
+### Como funciona?
 
-1. **Embeddings:** each text chunk is converted into a vector of numbers (384 dimensions for all-MiniLM-L6-v2). The vector captures the *meaning* of the text.
-2. **Index:** all vectors are stored in a vector database (ChromaDB), which allows fast nearest-neighbor lookup.
-3. **Search:** the question is converted into a vector with the same model. The system finds the closest vectors using cosine distance.
-4. **Result:** the most similar chunks are returned with their distance: **0 means identical meaning**, values near **1 mean unrelated**, and the closer to 0 the more relevant. The interface also shows the **similarity** (1 − distance).
+1. **Embeddings:** cada trecho de texto é convertido em um vetor de números (384 dimensões no all-MiniLM-L6-v2). Esse vetor captura o *significado* do texto.
+2. **Índice:** todos os vetores ficam em um banco vetorial (ChromaDB), que permite achar os vizinhos mais próximos rapidamente.
+3. **Busca:** a pergunta é convertida em vetor com o mesmo modelo. O sistema encontra os vetores mais próximos pela distância de cosseno.
+4. **Resultado:** os trechos mais parecidos são devolvidos com sua distância: **0 significa mesmo sentido**, valores perto de **1 significam sem relação**, e quanto mais perto de 0, mais relevante. A interface também mostra a **similaridade** (1 − distância).
 
-### Why is it better than keyword search?
+### Por que é melhor que busca por palavra-chave?
 
-| Keyword search | Semantic search |
+| Busca por palavra-chave | Busca semântica |
 |---|---|
-| Looks for the exact words | Looks for the meaning |
-| "tablet use" does not match "screen time" | "tablet use" is close to "screen time" |
-| May return nothing | Returns relevant passages |
+| Procura a palavra exata | Procura o significado |
+| "tablet use" não casa com "screen time" | "tablet use" fica perto de "screen time" |
+| Pode não retornar nada | Retorna trechos relevantes |
 
-### Real example from this project
+### Exemplo real deste projeto
 
 ```
-Query:  "is screen time associated with childhood obesity?"
+Pergunta:  "is screen time associated with childhood obesity?"
 
-Result #1: PMC13589963.pdf, chunk 0
-           "The Association Between Daily Screen Time and Childhood
-            Overweight and Obesity: Current Evidence and Potential Mechanisms..."
-           Distance: 0.1167   Similarity: 88%
+Resultado #1: PMC13589963.pdf, chunk 0
+              "The Association Between Daily Screen Time and Childhood
+               Overweight and Obesity: Current Evidence and Potential Mechanisms..."
+              Distância: 0.1167   Similaridade: 88%
 
-Query:  "what are the best recipes for chocolate cake?"   (off-topic control)
+Pergunta:  "what are the best recipes for chocolate cake?"   (controle fora do tema)
 
-Result #1: distance 0.7166   Similarity: 28%
+Resultado #1: distância 0.7166   Similaridade: 28%
 ```
 
-Chunk 0 is the first piece of the article (title and authors), which is why it matches a question that is almost identical to the title.
+O chunk 0 é o primeiro pedaço do artigo (título e autores), por isso casa com uma pergunta quase idêntica ao título.
 
-Short queries (for example a single word such as "depression") tend to have larger distances than full questions, even when the results are correct (best result: distance 0.4694, similarity 53%). Compare distances within the same query rather than across very different queries.
+Consultas curtas (por exemplo uma única palavra como "depression") tendem a ter distâncias maiores que perguntas completas, mesmo quando os resultados estão certos (melhor resultado: distância 0.4694, similaridade 53%). Compare distâncias dentro da mesma consulta, e não entre consultas muito diferentes.
 
-## Main dependencies
+## Dependências principais
 
-- `pypdf`: PDF text extraction
-- `chromadb`: vector database, also provides the embedding function (all-MiniLM-L6-v2 running on ONNX Runtime)
-- `scikit-learn`: Isolation Forest, K-Means, t-SNE and TF-IDF
-- `streamlit`, `plotly`: interface and interactive chart
+- `pypdf`: extração de texto dos PDFs
+- `chromadb`: banco vetorial, que também fornece a função de embeddings (all-MiniLM-L6-v2 rodando no ONNX Runtime)
+- `scikit-learn`: Isolation Forest, K-Means, t-SNE e TF-IDF
+- `streamlit`, `plotly`: interface e gráfico interativo
 - `numpy`
 
-See `requirements.txt` for the full list.
+Veja o `requirements.txt` para a lista completa.
 
-## Data origin
+## Dados de origem
 
-The 30 PDFs come from **PubMed Central**, an open-access repository of scientific articles. Each article's license allows reuse (typically CC-BY).
+Os 30 PDFs vêm do **PubMed Central**, um repositório de artigos científicos de **acesso aberto** (open access). A licença de cada artigo permite reuso (tipicamente CC-BY).
 
-Examples of articles in the collection:
+Exemplos de artigos da coleção:
 
-- `data/raw/PMC13589963.pdf`: review on daily screen time and childhood overweight and obesity
-- `data/raw/PMC13570809.pdf`: artificial intelligence interaction vs. traditional screen exposure in child development
-- `data/raw/PMC13589181.pdf`: types of screen time and developmental outcomes in children aged 0-6
-- ... (30 in total)
+- `data/raw/PMC13589963.pdf`: revisão sobre tempo de tela diário e sobrepeso e obesidade infantil
+- `data/raw/PMC13570809.pdf`: interação com inteligência artificial vs. exposição tradicional a telas no desenvolvimento infantil
+- `data/raw/PMC13589181.pdf`: tipos de tempo de tela e desfechos de desenvolvimento em crianças de 0 a 6 anos
+- ... (30 no total)
 
-To read an original article, use its PMC ID:
+Para consultar o artigo original, use o ID PMC:
 
 ```
 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC13589963/
 ```
 
-## Limitations and future work
+## Limitações e trabalhos futuros
 
-- **Isolation Forest cut-off:** `contamination = 0.03` fixes the share of flagged chunks, whether or not there is that much noise. A manual review of the flagged chunks is recommended.
-- **Supervised quality classifier (not implemented):** labeling ~20% of the flagged chunks as relevant or irrelevant and training a logistic regression to decide which ones to remove was left as future work.
-- **Embedding model:** all-MiniLM-L6-v2 is small; a larger model could improve retrieval.
-- **Clusters:** K-Means needs N chosen by the user and always returns N groups.
-- **Index lifecycle:** `reports/removed_ids.json` is read by the interface; if the index is rebuilt with `embedder.py` without repeating the cleaning, the "removed" numbers become outdated.
-- Full discussion: [`docs/relatorio_projeto.md`](docs/relatorio_projeto.md).
+- **Corte do Isolation Forest:** `contamination = 0.03` fixa a fração de trechos marcados, haja ou não tanto ruído. Recomenda-se revisar à mão os trechos marcados.
+- **Classificador supervisionado de qualidade (não implementado):** rotular ~20% dos trechos marcados como relevantes ou irrelevantes e treinar uma regressão logística para decidir quais remover ficou como trabalho futuro.
+- **Modelo de embeddings:** o all-MiniLM-L6-v2 é pequeno; um modelo maior poderia melhorar a busca.
+- **Clusters:** o K-Means precisa que o N seja escolhido pelo usuário e sempre devolve N grupos.
+- **Ciclo de vida do índice:** a interface lê `reports/removed_ids.json`; se o índice for reconstruído com `embedder.py` sem repetir a limpeza, os números de "removidos" ficam desatualizados.
+- Discussão completa: [`docs/relatorio_projeto.md`](docs/relatorio_projeto.md).
 
-## Troubleshooting
+## Solução de problemas
 
-### "Collection not found" or "Index not found"
+### "Collection not found" ou "Index not found"
 
-**Cause:** `embedder.py` has not been run yet, so the index does not exist.
+**Causa:** o `embedder.py` ainda não foi executado, então o índice não existe.
 
-**Fix:**
+**Solução:**
 
 ```bash
 python src/embedder.py
 ```
 
-### Search results look wrong or random
+### Os resultados da busca parecem errados ou aleatórios
 
-Check, in this order:
+Verifique, nesta ordem:
 
-1. `embedder.py` ran completely (the last log line shows the total chunks indexed, 6,069 here before the quality check).
-2. `search.py` uses the same collection and embedding function as `embedder.py`.
-3. `clean.py` did not remove too many chunks or let noise through.
+1. O `embedder.py` rodou até o fim (a última linha do log mostra o total de trechos indexados, 6.069 aqui antes do controle de qualidade).
+2. O `search.py` usa a mesma collection e a mesma função de embeddings do `embedder.py`.
+3. O `clean.py` não removeu trechos demais nem deixou passar ruído.
 
-### The interface still shows old numbers after running `run_quality.py`
+### A interface ainda mostra números antigos depois de rodar o `run_quality.py`
 
-Streamlit caches the data. Stop the app (Ctrl+C), start it again with `streamlit run app.py` and reload the page.
+O Streamlit guarda os dados em cache. Pare o app (Ctrl+C), inicie de novo com `streamlit run app.py` e recarregue a página.
 
-### Port 8501 is already in use
+### A porta 8501 já está em uso
 
-Stop the other `streamlit run` or `docker compose` process, or run `streamlit run app.py --server.port 8502`.
+Pare o outro processo `streamlit run` ou `docker compose`, ou rode `streamlit run app.py --server.port 8502`.
 
-## Author
+## Autor
 
 **Grazielle Nascimento Ferreira**, Capstone Data Science, 2026.
 
 **Email:** Grazielle.Nascimento0724@jala.university
 
-## License
+## Licença
 
-This project uses data from **PubMed Central** (open access, typically CC-BY).
+Este projeto usa dados do **PubMed Central** (acesso aberto, tipicamente CC-BY).
 
 ---
 
-**Last updated:** October 16, 2026
+**Última atualização:** 16 de outubro de 2026
