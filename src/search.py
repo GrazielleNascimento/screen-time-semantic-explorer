@@ -43,8 +43,26 @@ def search(question, n_results=N_RESULTS):
     return results
 
 
+def to_records(results):
+    """Converte o resultado bruto do ChromaDB em uma lista de dicionários (um por chunk)."""
+    records = []
+    for text, meta, dist in zip(results["documents"][0], results["metadatas"][0], results["distances"][0]):
+        records.append({
+            "text": text,
+            "source_file": meta["source_file"],
+            "chunk_idx": meta["chunk_idx"],
+            "distance": dist,
+        })
+    return records
+
+
+def search_records(question, n_results=N_RESULTS):
+    """Igual a search(), mas devolve uma lista de dicionários (usada pela interface)."""
+    return to_records(search(question, n_results))
+
+
 def print_results(question, results):
-    """Imprime, para uma pergunta, os chunks retornados com PDF de origem e distância."""
+    """Imprime, para uma pergunta, os chunks retornados com PDF de origem, distância e similaridade."""
     documents = results["documents"][0]
     metadatas = results["metadatas"][0]
     distances = results["distances"][0]
@@ -54,8 +72,7 @@ def print_results(question, results):
     print("=" * 100 + "\n")
 
     for rank, (text, meta, dist) in enumerate(zip(documents, metadatas, distances), start=1):
-        relevance = "🟢 Alta" if dist < 0.2 else "🟡 Média" if dist < 0.35 else "🔴 Baixa"
-        print(f"📄 Resultado #{rank} | Relevância: {relevance} | Distância: {dist:.4f}")
+        print(f"📄 Resultado #{rank} | Distância: {dist:.4f} | Similaridade: {max(0.0, 1 - dist):.0%}")
         print(f"   Arquivo: {meta['source_file']} | Chunk: {meta['chunk_idx']}")
         print(f"   ─" * 50)
 
