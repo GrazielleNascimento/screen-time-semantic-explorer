@@ -162,6 +162,17 @@ p, li { line-height: 1.6; }
 .stMarkdown td { padding: 8px 10px; border-top: 1px solid var(--border); }
 .stMarkdown tr:nth-child(even) td { background: #F8FAFC; }
 
+/* Footer: linha fina no final */
+.page-footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #E2E8F0;
+    color: #64748B;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    text-align: center;
+}
+
 /* Rodapé e scrollbar */
 .footer { color: var(--muted); font-size: .8rem; margin-top: 2rem; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }

@@ -56,9 +56,3 @@ def render(total_chunks: int, n_documents: int, n_removed: int) -> None:
             with col:
                 topic_card(start + offset, topic["title"], topic["text"], TOPICS_DIR / topic["svg"],
                            topic["emoji"], topic["color"], topic["tint"], topic["border"], _open_topic, (topic["question"],))
-
-
-    st.markdown(
-        '<div class="footer">Author: Grazielle Nascimento · Data: PubMed Central (open access)</div>',
-        unsafe_allow_html=True,
-    )

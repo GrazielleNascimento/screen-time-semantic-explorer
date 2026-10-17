@@ -20,7 +20,7 @@ from quality_report import REPORT_FILE, read_removed_ids  # noqa: E402
 from search import search_records  # noqa: E402
 from store import Corpus, IndexNotFoundError, load_corpus, open_collection  # noqa: E402
 from ui import clusters_page, home_page, quality_page, search_page  # noqa: E402
-from ui.components import sidebar_brand, sidebar_footer  # noqa: E402
+from ui.components import footer, sidebar_brand, sidebar_footer  # noqa: E402
 from ui.theme import inject_css  # noqa: E402
 
 PAGES = ["Home", "Search", "Clusters", "Quality report"]
@@ -50,6 +50,11 @@ def get_clusters(n_clusters: int) -> tuple[np.ndarray, list[ClusterSummary]]:
     return labels, summarize_clusters(labels, corpus.documents, corpus.metadatas)
 
 
+@st.cache_data
+def get_removed_ids_count() -> int:
+    return len(read_removed_ids())
+
+
 def main() -> None:
     inject_css()
     with st.sidebar:
@@ -65,7 +70,7 @@ def main() -> None:
 
     if page == "Home":
         n_documents = len({meta["source_file"] for meta in corpus.metadatas})
-        home_page.render(len(corpus.ids), n_documents, len(read_removed_ids()))
+        home_page.render(len(corpus.ids), n_documents, get_removed_ids_count())
     elif page == "Search":
         search_page.render(search_records)
     elif page == "Clusters":
@@ -75,6 +80,8 @@ def main() -> None:
     else:
         report = REPORT_FILE.read_text(encoding="utf-8") if REPORT_FILE.exists() else None
         quality_page.render(len(corpus.ids), len(read_removed_ids()), report)
+
+    footer()
 
 
 main()

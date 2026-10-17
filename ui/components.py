@@ -109,3 +109,12 @@ def sidebar_brand() -> None:
 def sidebar_footer() -> None:
     """Rodapé da sidebar."""
     _html('<div class="sidebar-footer">v1.0 · Powered by ChromaDB · MiniLM</div>')
+
+
+def footer() -> None:
+    """Rodapé único e fino em todas as páginas."""
+    _html(
+        '<div class="page-footer">'
+        '© 2026 Grazielle Nascimento Ferreira'
+        '</div>'
+    )
