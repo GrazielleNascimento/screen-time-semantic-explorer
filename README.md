@@ -403,8 +403,6 @@ Pare o outro processo `streamlit run` ou `docker compose`, ou rode `streamlit ru
 
 **Grazielle Nascimento Ferreira**, Capstone Data Science, 2026.
 
-**Email:** Grazielle.Nascimento0724@jala.university
-
 ## Licença
 
 Este projeto usa dados do **PubMed Central** (acesso aberto, tipicamente CC-BY).
