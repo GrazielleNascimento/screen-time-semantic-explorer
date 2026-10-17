@@ -1,3 +1,6 @@
-pypdf
-chromadb
-sentence-transformers
+pypdf>=5.0
+chromadb>=1.0
+numpy>=2.0
+scikit-learn>=1.5
+streamlit>=1.50
+plotly>=5.24

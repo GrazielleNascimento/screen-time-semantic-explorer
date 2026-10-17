@@ -16,6 +16,7 @@ import sys
 
 LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+# exemplo: 2024-01-01 12:00:00 | INFO     | src.loader | Encontrados 10 PDFs em data/raw
 
 # Essas bibliotecas logam muito em INFO (ex.: uma linha por request HTTP) e
 # afogariam os logs do próprio pipeline, por isso ficam restritas a WARNING+.

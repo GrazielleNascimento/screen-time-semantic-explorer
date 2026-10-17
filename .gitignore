@@ -31,3 +31,11 @@ Thumbs.db
 
 # Banco vetorial (gerado pelo embedder.py, não versionar)
 data/chroma/
+
+# Cache do t-SNE (gerado pelo clustering.py)
+data/processed/tsne_coords.npy
+.cache/
+
+data/chroma_backup*/
+ 
+reports_backup/
